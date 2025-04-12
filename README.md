@@ -2,6 +2,8 @@ The **Encom Globe** is a WebGL-based clone of the globe from the boardroom scene
 
 This version attempts to stay as true to the in-movie original as possible while maintaining a high frame rate on low powered machines and devices.  It is getting *pretty close* to acheiving that goal and mimics most of the details seen on screen, including the loading animations for the globe hexagon particles, the satellites, and the markers.
 
+(This is a forked version just to modify grunt build and package.json to support latest libraries)
+
 ![Encom Globe](https://raw.github.com/arscan/encom-globe/master/screenshot.jpg "Encom Globe")
 
 It written using Three.js, with parts implemented in GLSL.  It is not at all affiliated with Tron, Disney, or the team that created the original movie version.  It is just a tribute.
@@ -13,6 +15,16 @@ A [Demo](http://www.robscanlon.com/encom-globe) is available on my website.
 The Encom Globe was written as part of a [larger project](http://www.robscanlon.com/encom-boardroom) and with a specific use in mind, but it does provide a certain level of flexibility if you would like to use it yourself as an alternative to the popular [WebGL Globe](http://www.chromeexperiments.com/globe).  The blue markers, orange connected markers, and satellites can be placed wherever and whenever you would like.
 
 View [index.html](index.html) for a usage example.
+
+
+### TESTING
+you can run `npx http-server .` and browse it in your browser before compiling and minifying
+
+### BUILDING 
+1. first `npm install` or `yarn install` or any other package manager you want :)
+2. `grunt build`
+3. `grunt buildgrid`
+4. now you can edit index.html and replace the link for `build/encom-globe.js` to `build/encom-globe.min.js`
 
 ### License
 

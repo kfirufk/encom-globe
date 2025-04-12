@@ -95,7 +95,14 @@ fs.createReadStream(map)
         if(argv.o){
             var fs = require('fs');
 
-            fs.writeFile(argv.o, output);
+            fs.writeFile(argv.o, output, (err) => {
+                if (err) {
+                    console.error("Error writing file:", err);
+                } else {
+                    console.log("File successfully written to", argv.o);
+                }
+            });
+
 
         } else {
             console.log(output);
