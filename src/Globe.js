@@ -109,11 +109,14 @@ var createParticles = function(){
 
     var geometry = new THREE.BufferGeometry();
 
-    geometry.addAttribute( 'index', Uint16Array, triangles * 3, 1 );
-    geometry.addAttribute( 'position', Float32Array, triangles * 3, 3 );
-    geometry.addAttribute( 'normal', Float32Array, triangles * 3, 3 );
-    geometry.addAttribute( 'color', Float32Array, triangles * 3, 3 );
-    geometry.addAttribute( 'lng', Float32Array, triangles * 3, 1 );
+// Index buffer attribute
+    geometry.setIndex(new THREE.Uint16BufferAttribute(triangles * 3, 1));
+
+// Vertex attributes using Float32BufferAttribute
+    geometry.setAttribute('position', new THREE.Float32BufferAttribute(triangles * 3 * 3, 3));
+    geometry.setAttribute('normal', new THREE.Float32BufferAttribute(triangles * 3 * 3, 3));
+    geometry.setAttribute('color', new THREE.Float32BufferAttribute(triangles * 3 * 3, 3));
+    geometry.setAttribute('lng', new THREE.Float32BufferAttribute(triangles * 3, 1));
 
     var lng_values = geometry.attributes.lng.array;
 
@@ -130,7 +133,7 @@ var createParticles = function(){
 
     var chunkSize = 21845;
 
-    var indices = geometry.attributes.index.array;
+    var indices = geometry.index.array;
 
     for ( var i = 0; i < indices.length; i ++ ) {
 
@@ -233,27 +236,41 @@ var createIntroLines = function(){
         opacity: .5
     });
 
-    for(var i = 0; i<this.introLinesCount; i++){
-        var geometry = new THREE.Geometry();
+    for (let i = 0; i < this.introLinesCount; i++) {
 
-        var lat = Math.random()*180 + 90;
-        var lon =  Math.random()*5;
-        var lenBase = 4 + Math.floor(Math.random()*5);
+        let lat = Math.random() * 180 + 90;
+        let lon = Math.random() * 5;
+        let lenBase = 4 + Math.floor(Math.random() * 5);
 
-        if(Math.random()<.3){
-            lon = Math.random()*30 - 50;
-            lenBase = 3 + Math.floor(Math.random()*3);
+        if (Math.random() < 0.3) {
+            lon = Math.random() * 30 - 50;
+            lenBase = 3 + Math.floor(Math.random() * 3);
         }
 
-        for(var j = 0; j< lenBase; j++){
-            var thisPoint = utils.mapPoint(lat, lon - j * 5);
-            sPoint = new THREE.Vector3(thisPoint.x*this.introLinesAltitude, thisPoint.y*this.introLinesAltitude, thisPoint.z*this.introLinesAltitude);
+        // Prepare an array to store vertex coordinates explicitly
+        const vertices = new Float32Array(lenBase * 3); // lenBase points * 3 components per vertex (x, y, z)
 
-            geometry.vertices.push(sPoint);  
+        for (let j = 0; j < lenBase; j++) {
+            const thisPoint = utils.mapPoint(lat, lon - j * 5);
+
+            const x = thisPoint.x * this.introLinesAltitude;
+            const y = thisPoint.y * this.introLinesAltitude;
+            const z = thisPoint.z * this.introLinesAltitude;
+
+            // explicitly pushing into correct position of Float32Array
+            const vertexIndex = j * 3;
+            vertices[vertexIndex] = x;
+            vertices[vertexIndex + 1] = y;
+            vertices[vertexIndex + 2] = z;
         }
 
-        this.introLines.add(new THREE.Line(geometry, introLinesMaterial));
+        // explicitly set up BufferGeometry
+        const geometry = new THREE.BufferGeometry();
+        geometry.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
+        // explicitly set the draw mode if needed (for line segments, the default is fine):
+        const line = new THREE.Line(geometry, introLinesMaterial);
 
+        this.introLines.add(line);
     }
     this.scene.add(this.introLines);
 };

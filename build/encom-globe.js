@@ -80430,11 +80430,14 @@ var createParticles = function(){
 
     var geometry = new THREE.BufferGeometry();
 
-    geometry.addAttribute( 'index', Uint16Array, triangles * 3, 1 );
-    geometry.addAttribute( 'position', Float32Array, triangles * 3, 3 );
-    geometry.addAttribute( 'normal', Float32Array, triangles * 3, 3 );
-    geometry.addAttribute( 'color', Float32Array, triangles * 3, 3 );
-    geometry.addAttribute( 'lng', Float32Array, triangles * 3, 1 );
+// Index buffer attribute
+    geometry.setIndex(new THREE.Uint16BufferAttribute(triangles * 3, 1));
+
+// Vertex attributes using Float32BufferAttribute
+    geometry.setAttribute('position', new THREE.Float32BufferAttribute(triangles * 3 * 3, 3));
+    geometry.setAttribute('normal', new THREE.Float32BufferAttribute(triangles * 3 * 3, 3));
+    geometry.setAttribute('color', new THREE.Float32BufferAttribute(triangles * 3 * 3, 3));
+    geometry.setAttribute('lng', new THREE.Float32BufferAttribute(triangles * 3, 1));
 
     var lng_values = geometry.attributes.lng.array;
 
@@ -80451,7 +80454,7 @@ var createParticles = function(){
 
     var chunkSize = 21845;
 
-    var indices = geometry.attributes.index.array;
+    var indices = geometry.index.array;
 
     for ( var i = 0; i < indices.length; i ++ ) {
 
@@ -80554,27 +80557,41 @@ var createIntroLines = function(){
         opacity: .5
     });
 
-    for(var i = 0; i<this.introLinesCount; i++){
-        var geometry = new THREE.Geometry();
+    for (let i = 0; i < this.introLinesCount; i++) {
 
-        var lat = Math.random()*180 + 90;
-        var lon =  Math.random()*5;
-        var lenBase = 4 + Math.floor(Math.random()*5);
+        let lat = Math.random() * 180 + 90;
+        let lon = Math.random() * 5;
+        let lenBase = 4 + Math.floor(Math.random() * 5);
 
-        if(Math.random()<.3){
-            lon = Math.random()*30 - 50;
-            lenBase = 3 + Math.floor(Math.random()*3);
+        if (Math.random() < 0.3) {
+            lon = Math.random() * 30 - 50;
+            lenBase = 3 + Math.floor(Math.random() * 3);
         }
 
-        for(var j = 0; j< lenBase; j++){
-            var thisPoint = utils.mapPoint(lat, lon - j * 5);
-            sPoint = new THREE.Vector3(thisPoint.x*this.introLinesAltitude, thisPoint.y*this.introLinesAltitude, thisPoint.z*this.introLinesAltitude);
+        // Prepare an array to store vertex coordinates explicitly
+        const vertices = new Float32Array(lenBase * 3); // lenBase points * 3 components per vertex (x, y, z)
 
-            geometry.vertices.push(sPoint);  
+        for (let j = 0; j < lenBase; j++) {
+            const thisPoint = utils.mapPoint(lat, lon - j * 5);
+
+            const x = thisPoint.x * this.introLinesAltitude;
+            const y = thisPoint.y * this.introLinesAltitude;
+            const z = thisPoint.z * this.introLinesAltitude;
+
+            // explicitly pushing into correct position of Float32Array
+            const vertexIndex = j * 3;
+            vertices[vertexIndex] = x;
+            vertices[vertexIndex + 1] = y;
+            vertices[vertexIndex + 2] = z;
         }
 
-        this.introLines.add(new THREE.Line(geometry, introLinesMaterial));
+        // explicitly set up BufferGeometry
+        const geometry = new THREE.BufferGeometry();
+        geometry.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
+        // explicitly set the draw mode if needed (for line segments, the default is fine):
+        const line = new THREE.Line(geometry, introLinesMaterial);
 
+        this.introLines.add(line);
     }
     this.scene.add(this.introLines);
 };
@@ -81123,7 +81140,7 @@ var Marker = function(lat, lon, text, altitude, previous, scene, _opts){
           currentVert,
           update;
 
-        _this.geometrySpline = new THREE.Geometry();
+        _this.geometrySpline = new THREE.BufferGeometry();
         materialSpline = new THREE.LineBasicMaterial({
             color: this.opts.lineColor,
             transparent: true,
@@ -81131,7 +81148,7 @@ var Marker = function(lat, lon, text, altitude, previous, scene, _opts){
             opacity: .5
         });
 
-        _this.geometrySplineDotted = new THREE.Geometry();
+        _this.geometrySplineDotted = new THREE.BufferGeometry();
         materialSplineDotted = new THREE.LineBasicMaterial({
             color: this.opts.lineColor,
             linewidth: 1,
@@ -81166,8 +81183,22 @@ var Marker = function(lat, lon, text, altitude, previous, scene, _opts){
             sPoint.globe_index = j;
             sPoint2.globe_index = j;
 
-            _this.geometrySpline.vertices.push(sPoint);  
-            _this.geometrySplineDotted.vertices.push(sPoint2);  
+            // _this.geometrySpline.vertices.push(sPoint);
+            const positionsSpline = new Float32Array((this.opts.lineSegments + 1) * 3);
+            for (let i = 0; i <= this.opts.lineSegments; i++) {
+                positionsSpline[i * 3] = sPoint.x;
+                positionsSpline[i * 3 + 1] = sPoint.y;
+                positionsSpline[i * 3 + 2] = sPoint.z;
+            }
+            _this.geometrySpline.setAttribute('position', new THREE.Float32BufferAttribute(positionsSpline, 3));
+
+            const positionsSplineDotted = new Float32Array((this.opts.lineSegments + 1) * 3);
+            for (let i = 0; i <= this.opts.lineSegments; i++) {
+                positionsSplineDotted[i * 3] = sPoint2.x;
+                positionsSplineDotted[i * 3 + 1] = sPoint2.y;
+                positionsSplineDotted[i * 3 + 2] = sPoint2.z;
+            }
+            _this.geometrySplineDotted.setAttribute('position', new THREE.Float32BufferAttribute(positionsSplineDotted, 3));
         }
 
 
@@ -81314,7 +81345,7 @@ var Pin = function(lat, lon, text, altitude, scene, smokeProvider, _opts){
 
     /* the line */
 
-    this.lineGeometry = new THREE.Geometry();
+    this.lineGeometry = new THREE.BufferGeometry();
     lineMaterial = new THREE.LineBasicMaterial({
         color: opts.lineColor,
         linewidth: opts.lineWidth
@@ -81322,8 +81353,15 @@ var Pin = function(lat, lon, text, altitude, scene, smokeProvider, _opts){
 
     point = utils.mapPoint(lat,lon);
 
-    this.lineGeometry.vertices.push(new THREE.Vector3(point.x, point.y, point.z));
-    this.lineGeometry.vertices.push(new THREE.Vector3(point.x, point.y, point.z));
+    // this.lineGeometry.vertices.push(new THREE.Vector3(point.x, point.y, point.z));
+    // this.lineGeometry.vertices.push(new THREE.Vector3(point.x, point.y, point.z));
+
+    const vertices = new Float32Array([
+        point.x, point.y, point.z,
+        point.x, point.y, point.z
+    ]);
+    this.lineGeometry.setAttribute('position', new THREE.BufferAttribute(vertices, 3));
+
     this.line = new THREE.Line(this.lineGeometry, lineMaterial);
 
     /* the label */
@@ -81363,20 +81401,16 @@ var Pin = function(lat, lon, text, altitude, scene, smokeProvider, _opts){
    /* intro animations */
 
    if(opts.showTop || opts.showLabel){
-       new TWEEN.Tween( {opacity: 0})
-           .to( {opacity: 1}, 500 )
-           .onUpdate(function(){
-               if(_this.topVisible){
-                   topMaterial.opacity = this.opacity;
-               } else {
-                   topMaterial.opacity = 0;
-               }
-               if(_this.labelVisible){
-                   labelMaterial.opacity = this.opacity;
-               } else {
-                   labelMaterial.opacity = 0;
-               }
-           }).delay(1000)
+       new TWEEN.Tween(point)
+           .to({ x: point.x * altitude, y: point.y * altitude, z: point.z * altitude }, 1500)
+           .easing(TWEEN.Easing.Elastic.Out)
+           .onUpdate(() => {
+               const positions = this.lineGeometry.attributes.position.array;
+               positions[3] = point.x;
+               positions[4] = point.y;
+               positions[5] = point.z;
+               this.lineGeometry.attributes.position.needsUpdate = true; // Important update flag
+           })
            .start();
    }
 
@@ -81879,20 +81913,39 @@ var SmokeProvider = function(scene, _opts){
     }
 
     this.opts = opts;
-    this.geometry = new THREE.Geometry();
+    this.geometry = new THREE.BufferGeometry();
+    /*
     this.attributes = {
         myStartTime: {type: 'f', value: []},
         myStartLat: {type: 'f', value: []},
         myStartLon: {type: 'f', value: []},
         altitude: {type: 'f', value: []},
         active: {type: 'f', value: []}
+    };*/
+
+    // explicitly define attributes (as typed arrays) clearly
+    this.attributes = {
+        myStartTime: new Float32Array(opts.smokeCount),
+        myStartLat: new Float32Array(opts.smokeCount),
+        myStartLon: new Float32Array(opts.smokeCount),
+        altitude: new Float32Array(opts.smokeCount),
+        active: new Float32Array(opts.smokeCount),
     };
+
+// explicitly set them as attributes clearly
+    this.geometry.setAttribute('myStartTime', new THREE.Float32BufferAttribute(this.attributes.myStartTime, 1));
+    this.geometry.setAttribute('myStartLat', new THREE.Float32BufferAttribute(this.attributes.myStartLat, 1));
+    this.geometry.setAttribute('myStartLon', new THREE.Float32BufferAttribute(this.attributes.myStartLon, 1));
+    this.geometry.setAttribute('altitude', new THREE.Float32BufferAttribute(this.attributes.altitude, 1));
+    this.geometry.setAttribute('active', new THREE.Float32BufferAttribute(this.attributes.active, 1));
+
 
     this.uniforms = {
         currentTime: { type: 'f', value: 0.0},
         color: { type: 'c', value: new THREE.Color("#aaa")},
     }
 
+    /*
     var material = new THREE.ShaderMaterial( {
         uniforms:       this.uniforms,
         attributes:     this.attributes,
@@ -81901,6 +81954,16 @@ var SmokeProvider = function(scene, _opts){
         transparent:    true
     });
 
+     */
+
+    var material = new THREE.ShaderMaterial({
+        uniforms: this.uniforms,
+        vertexShader: vertexShader,
+        fragmentShader: fragmentShader,
+        transparent: true
+    });
+
+    /*
     for(var i = 0; i< opts.smokeCount; i++){
         var vertex = new THREE.Vector3();
         vertex.set(0,0,0);
@@ -81911,17 +81974,23 @@ var SmokeProvider = function(scene, _opts){
         this.attributes.altitude.value[i] = 0.0;
         this.attributes.active.value[i] = 0.0;
     }
+*/
+    const vertices = new Float32Array(opts.smokeCount * 3);
+    this.geometry.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
 
-    this.attributes.myStartTime.needsUpdate = true;
-    this.attributes.myStartLat.needsUpdate = true;
-    this.attributes.myStartLon.needsUpdate = true;
-    this.attributes.altitude.needsUpdate = true;
-    this.attributes.active.needsUpdate = true;
+
+    this.geometry.attributes.myStartTime.needsUpdate = true;
+    this.geometry.attributes.myStartLat.needsUpdate = true;
+    this.geometry.attributes.myStartLon.needsUpdate = true;
+    this.geometry.attributes.altitude.needsUpdate = true;
+    this.geometry.attributes.active.needsUpdate = true;
 
     this.smokeIndex = 0;
     this.totalRunTime = 0;
 
-    scene.add( new THREE.ParticleSystem( this.geometry, material));
+    // scene.add( new THREE.ParticleSystem( this.geometry, material));
+    scene.add(new THREE.Points(this.geometry, material));
+
 
 };
 
@@ -81932,24 +82001,35 @@ SmokeProvider.prototype.setFire = function(lat, lon, altitude){
     /* add the smoke */
     var startSmokeIndex = this.smokeIndex;
 
-    for(var i = 0; i< this.opts.smokePerPin; i++){
-        this.geometry.vertices[this.smokeIndex].set(point.x * altitude, point.y * altitude, point.z * altitude);
-        this.geometry.verticesNeedUpdate = true;
-        this.attributes.myStartTime.value[this.smokeIndex] = this.totalRunTime + (1000*i/this.opts.smokePerSecond + 1500);
-        this.attributes.myStartLat.value[this.smokeIndex] = lat;
-        this.attributes.myStartLon.value[this.smokeIndex] = lon;
-        this.attributes.altitude.value[this.smokeIndex] = altitude;
-        this.attributes.active.value[this.smokeIndex] = 1.0;
+    const positionAttr = this.geometry.attributes.position;
+    const myStartTimeAttr = this.geometry.attributes.myStartTime;
+    const myStartLatAttr = this.geometry.attributes.myStartLat;
+    const myStartLonAttr = this.geometry.attributes.myStartLon;
+    const altitudeAttr = this.geometry.attributes.altitude;
+    const activeAttr = this.geometry.attributes.active;
 
-        this.attributes.myStartTime.needsUpdate = true;
-        this.attributes.myStartLat.needsUpdate = true;
-        this.attributes.myStartLon.needsUpdate = true;
-        this.attributes.altitude.needsUpdate = true;
-        this.attributes.active.needsUpdate = true;
+    for (let i = 0; i < this.opts.smokePerPin; i++) {
+        const idx3 = this.smokeIndex * 3;
 
-        this.smokeIndex++;
-        this.smokeIndex = this.smokeIndex % this.geometry.vertices.length;
+        positionAttr.array[idx3] = point.x * altitude;
+        positionAttr.array[idx3 + 1] = point.y * altitude;
+        positionAttr.array[idx3 + 2] = point.z * altitude;
+
+        myStartTimeAttr.array[this.smokeIndex] = this.totalRunTime + (1000 * i / this.opts.smokePerSecond + 1500);
+        myStartLatAttr.array[this.smokeIndex] = lat;
+        myStartLonAttr.array[this.smokeIndex] = lon;
+        altitudeAttr.array[this.smokeIndex] = altitude;
+        activeAttr.array[this.smokeIndex] = 1.0;
+
+        this.smokeIndex = (this.smokeIndex + 1) % positionAttr.count;
     }
+
+    positionAttr.needsUpdate = true;
+    myStartTimeAttr.needsUpdate = true;
+    myStartLatAttr.needsUpdate = true;
+    myStartLonAttr.needsUpdate = true;
+    altitudeAttr.needsUpdate = true;
+    activeAttr.needsUpdate = true;
 
 
     return startSmokeIndex;

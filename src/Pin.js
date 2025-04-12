@@ -64,7 +64,7 @@ var Pin = function(lat, lon, text, altitude, scene, smokeProvider, _opts){
 
     /* the line */
 
-    this.lineGeometry = new THREE.Geometry();
+    this.lineGeometry = new THREE.BufferGeometry();
     lineMaterial = new THREE.LineBasicMaterial({
         color: opts.lineColor,
         linewidth: opts.lineWidth
@@ -72,8 +72,15 @@ var Pin = function(lat, lon, text, altitude, scene, smokeProvider, _opts){
 
     point = utils.mapPoint(lat,lon);
 
-    this.lineGeometry.vertices.push(new THREE.Vector3(point.x, point.y, point.z));
-    this.lineGeometry.vertices.push(new THREE.Vector3(point.x, point.y, point.z));
+    // this.lineGeometry.vertices.push(new THREE.Vector3(point.x, point.y, point.z));
+    // this.lineGeometry.vertices.push(new THREE.Vector3(point.x, point.y, point.z));
+
+    const vertices = new Float32Array([
+        point.x, point.y, point.z,
+        point.x, point.y, point.z
+    ]);
+    this.lineGeometry.setAttribute('position', new THREE.BufferAttribute(vertices, 3));
+
     this.line = new THREE.Line(this.lineGeometry, lineMaterial);
 
     /* the label */
@@ -113,20 +120,16 @@ var Pin = function(lat, lon, text, altitude, scene, smokeProvider, _opts){
    /* intro animations */
 
    if(opts.showTop || opts.showLabel){
-       new TWEEN.Tween( {opacity: 0})
-           .to( {opacity: 1}, 500 )
-           .onUpdate(function(){
-               if(_this.topVisible){
-                   topMaterial.opacity = this.opacity;
-               } else {
-                   topMaterial.opacity = 0;
-               }
-               if(_this.labelVisible){
-                   labelMaterial.opacity = this.opacity;
-               } else {
-                   labelMaterial.opacity = 0;
-               }
-           }).delay(1000)
+       new TWEEN.Tween(point)
+           .to({ x: point.x * altitude, y: point.y * altitude, z: point.z * altitude }, 1500)
+           .easing(TWEEN.Easing.Elastic.Out)
+           .onUpdate(() => {
+               const positions = this.lineGeometry.attributes.position.array;
+               positions[3] = point.x;
+               positions[4] = point.y;
+               positions[5] = point.z;
+               this.lineGeometry.attributes.position.needsUpdate = true; // Important update flag
+           })
            .start();
    }
 

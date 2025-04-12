@@ -142,7 +142,7 @@ var Marker = function(lat, lon, text, altitude, previous, scene, _opts){
           currentVert,
           update;
 
-        _this.geometrySpline = new THREE.Geometry();
+        _this.geometrySpline = new THREE.BufferGeometry();
         materialSpline = new THREE.LineBasicMaterial({
             color: this.opts.lineColor,
             transparent: true,
@@ -150,7 +150,7 @@ var Marker = function(lat, lon, text, altitude, previous, scene, _opts){
             opacity: .5
         });
 
-        _this.geometrySplineDotted = new THREE.Geometry();
+        _this.geometrySplineDotted = new THREE.BufferGeometry();
         materialSplineDotted = new THREE.LineBasicMaterial({
             color: this.opts.lineColor,
             linewidth: 1,
@@ -185,8 +185,22 @@ var Marker = function(lat, lon, text, altitude, previous, scene, _opts){
             sPoint.globe_index = j;
             sPoint2.globe_index = j;
 
-            _this.geometrySpline.vertices.push(sPoint);  
-            _this.geometrySplineDotted.vertices.push(sPoint2);  
+            // _this.geometrySpline.vertices.push(sPoint);
+            const positionsSpline = new Float32Array((this.opts.lineSegments + 1) * 3);
+            for (let i = 0; i <= this.opts.lineSegments; i++) {
+                positionsSpline[i * 3] = sPoint.x;
+                positionsSpline[i * 3 + 1] = sPoint.y;
+                positionsSpline[i * 3 + 2] = sPoint.z;
+            }
+            _this.geometrySpline.setAttribute('position', new THREE.Float32BufferAttribute(positionsSpline, 3));
+
+            const positionsSplineDotted = new Float32Array((this.opts.lineSegments + 1) * 3);
+            for (let i = 0; i <= this.opts.lineSegments; i++) {
+                positionsSplineDotted[i * 3] = sPoint2.x;
+                positionsSplineDotted[i * 3 + 1] = sPoint2.y;
+                positionsSplineDotted[i * 3 + 2] = sPoint2.z;
+            }
+            _this.geometrySplineDotted.setAttribute('position', new THREE.Float32BufferAttribute(positionsSplineDotted, 3));
         }
 
 

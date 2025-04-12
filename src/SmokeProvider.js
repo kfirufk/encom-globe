@@ -78,20 +78,39 @@ var SmokeProvider = function(scene, _opts){
     }
 
     this.opts = opts;
-    this.geometry = new THREE.Geometry();
+    this.geometry = new THREE.BufferGeometry();
+    /*
     this.attributes = {
         myStartTime: {type: 'f', value: []},
         myStartLat: {type: 'f', value: []},
         myStartLon: {type: 'f', value: []},
         altitude: {type: 'f', value: []},
         active: {type: 'f', value: []}
+    };*/
+
+    // explicitly define attributes (as typed arrays) clearly
+    this.attributes = {
+        myStartTime: new Float32Array(opts.smokeCount),
+        myStartLat: new Float32Array(opts.smokeCount),
+        myStartLon: new Float32Array(opts.smokeCount),
+        altitude: new Float32Array(opts.smokeCount),
+        active: new Float32Array(opts.smokeCount),
     };
+
+// explicitly set them as attributes clearly
+    this.geometry.setAttribute('myStartTime', new THREE.Float32BufferAttribute(this.attributes.myStartTime, 1));
+    this.geometry.setAttribute('myStartLat', new THREE.Float32BufferAttribute(this.attributes.myStartLat, 1));
+    this.geometry.setAttribute('myStartLon', new THREE.Float32BufferAttribute(this.attributes.myStartLon, 1));
+    this.geometry.setAttribute('altitude', new THREE.Float32BufferAttribute(this.attributes.altitude, 1));
+    this.geometry.setAttribute('active', new THREE.Float32BufferAttribute(this.attributes.active, 1));
+
 
     this.uniforms = {
         currentTime: { type: 'f', value: 0.0},
         color: { type: 'c', value: new THREE.Color("#aaa")},
     }
 
+    /*
     var material = new THREE.ShaderMaterial( {
         uniforms:       this.uniforms,
         attributes:     this.attributes,
@@ -100,6 +119,16 @@ var SmokeProvider = function(scene, _opts){
         transparent:    true
     });
 
+     */
+
+    var material = new THREE.ShaderMaterial({
+        uniforms: this.uniforms,
+        vertexShader: vertexShader,
+        fragmentShader: fragmentShader,
+        transparent: true
+    });
+
+    /*
     for(var i = 0; i< opts.smokeCount; i++){
         var vertex = new THREE.Vector3();
         vertex.set(0,0,0);
@@ -110,17 +139,23 @@ var SmokeProvider = function(scene, _opts){
         this.attributes.altitude.value[i] = 0.0;
         this.attributes.active.value[i] = 0.0;
     }
+*/
+    const vertices = new Float32Array(opts.smokeCount * 3);
+    this.geometry.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
 
-    this.attributes.myStartTime.needsUpdate = true;
-    this.attributes.myStartLat.needsUpdate = true;
-    this.attributes.myStartLon.needsUpdate = true;
-    this.attributes.altitude.needsUpdate = true;
-    this.attributes.active.needsUpdate = true;
+
+    this.geometry.attributes.myStartTime.needsUpdate = true;
+    this.geometry.attributes.myStartLat.needsUpdate = true;
+    this.geometry.attributes.myStartLon.needsUpdate = true;
+    this.geometry.attributes.altitude.needsUpdate = true;
+    this.geometry.attributes.active.needsUpdate = true;
 
     this.smokeIndex = 0;
     this.totalRunTime = 0;
 
-    scene.add( new THREE.ParticleSystem( this.geometry, material));
+    // scene.add( new THREE.ParticleSystem( this.geometry, material));
+    scene.add(new THREE.Points(this.geometry, material));
+
 
 };
 
@@ -131,24 +166,35 @@ SmokeProvider.prototype.setFire = function(lat, lon, altitude){
     /* add the smoke */
     var startSmokeIndex = this.smokeIndex;
 
-    for(var i = 0; i< this.opts.smokePerPin; i++){
-        this.geometry.vertices[this.smokeIndex].set(point.x * altitude, point.y * altitude, point.z * altitude);
-        this.geometry.verticesNeedUpdate = true;
-        this.attributes.myStartTime.value[this.smokeIndex] = this.totalRunTime + (1000*i/this.opts.smokePerSecond + 1500);
-        this.attributes.myStartLat.value[this.smokeIndex] = lat;
-        this.attributes.myStartLon.value[this.smokeIndex] = lon;
-        this.attributes.altitude.value[this.smokeIndex] = altitude;
-        this.attributes.active.value[this.smokeIndex] = 1.0;
+    const positionAttr = this.geometry.attributes.position;
+    const myStartTimeAttr = this.geometry.attributes.myStartTime;
+    const myStartLatAttr = this.geometry.attributes.myStartLat;
+    const myStartLonAttr = this.geometry.attributes.myStartLon;
+    const altitudeAttr = this.geometry.attributes.altitude;
+    const activeAttr = this.geometry.attributes.active;
 
-        this.attributes.myStartTime.needsUpdate = true;
-        this.attributes.myStartLat.needsUpdate = true;
-        this.attributes.myStartLon.needsUpdate = true;
-        this.attributes.altitude.needsUpdate = true;
-        this.attributes.active.needsUpdate = true;
+    for (let i = 0; i < this.opts.smokePerPin; i++) {
+        const idx3 = this.smokeIndex * 3;
 
-        this.smokeIndex++;
-        this.smokeIndex = this.smokeIndex % this.geometry.vertices.length;
+        positionAttr.array[idx3] = point.x * altitude;
+        positionAttr.array[idx3 + 1] = point.y * altitude;
+        positionAttr.array[idx3 + 2] = point.z * altitude;
+
+        myStartTimeAttr.array[this.smokeIndex] = this.totalRunTime + (1000 * i / this.opts.smokePerSecond + 1500);
+        myStartLatAttr.array[this.smokeIndex] = lat;
+        myStartLonAttr.array[this.smokeIndex] = lon;
+        altitudeAttr.array[this.smokeIndex] = altitude;
+        activeAttr.array[this.smokeIndex] = 1.0;
+
+        this.smokeIndex = (this.smokeIndex + 1) % positionAttr.count;
     }
+
+    positionAttr.needsUpdate = true;
+    myStartTimeAttr.needsUpdate = true;
+    myStartLatAttr.needsUpdate = true;
+    myStartLonAttr.needsUpdate = true;
+    altitudeAttr.needsUpdate = true;
+    activeAttr.needsUpdate = true;
 
 
     return startSmokeIndex;

@@ -1,3 +1,9 @@
+###
+
+STILL BROKEN
+
+####
+
 The **Encom Globe** is a WebGL-based clone of the globe from the boardroom scene in [Tron: Legacy](http://www.imdb.com/title/tt1104001/).  If you don't recall that scene, check out [Bradley Munkowitz's excellent writeup](http://work.gmunk.com/TRON-Board-Room) about its production for more information.
 
 This version attempts to stay as true to the in-movie original as possible while maintaining a high frame rate on low powered machines and devices.  It is getting *pretty close* to acheiving that goal and mimics most of the details seen on screen, including the loading animations for the globe hexagon particles, the satellites, and the markers.
