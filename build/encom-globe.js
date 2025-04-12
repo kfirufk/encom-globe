@@ -80592,13 +80592,19 @@ function Globe(width, height, opts){
     this.height = height;
     // this.smokeIndex = 0;
     this.points = [];
+
     this.introLines = new THREE.Object3D();
     this.pins = [];
     this.markers = [];
     this.satelliteAnimations = [];
     this.satelliteMeshes = [];
     this.satellites = {};
-    this.quadtree = new Quadtree2(new Vec2(180, 360), 5);
+    // this.quadtree = new Quadtree2(new Vec2(180, 360), 5);
+    this.quadtree = new Quadtree2({
+        size: new Vec2(180, 360),
+        objectLimit: 5  // explicitly "max elements per quad node"
+    });
+
     this.active = true;
 
     var defaults = {
